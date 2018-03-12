@@ -2,7 +2,6 @@
 
 using Microsoft.SqlServer.Types;
 using System;
-
 namespace SQLSpatialTools
 {
     /**
@@ -99,4 +98,100 @@ namespace SQLSpatialTools
         }
 
     }
+
+    class LocateAlongGeometrySink2 : IGeometrySink {
+
+        SqlGeometry _point;             // see point, mida otsime
+        double[] _retval;
+        int _srid;                     // The _srid we are working in.
+        double _lastlat = 0;
+        double _lastlon = 0;
+        double _cp_lat = 0;
+        double _cp_lon = 0;
+        bool _found = false;
+        double _distance = 0;
+
+        // We target another builder, to which we will send a point representing the point we find.
+        // We also take a distance, which is the point along the input linestring we will travel.
+        // Note that we only operate on LineString instances: anything else will throw an exception.
+        public LocateAlongGeometrySink2(SqlGeometry point, ref double[] retval) {
+            _retval = retval;
+            _retval[0] = -1;
+            _point = point;
+            _cp_lat = (double)point.STX;
+            _cp_lon = (double)point.STY;
+        }
+
+        // Save the SRID for later
+        public void SetSrid(int srid) {
+            _srid = srid;
+        }
+
+        // Start the geometry.  Throw if it isn't a LineString.
+        public void BeginGeometry(OpenGisGeometryType type) {
+            if (type != OpenGisGeometryType.LineString)
+                throw new ArgumentException("This operation may only be executed on LineString instances.");
+        }
+
+        // Start the figure.  Note that since we only operate on LineStrings, this should only be executed
+        // once.
+        public void BeginFigure(double latitude, double longitude, double? z, double? m) {
+            _lastlat = latitude;
+            _lastlon = longitude;
+        }
+
+        private bool IsPointOnLine(double lat1, double lon1, double lat2, double lon2, double cp_lat, double cp_lon) {
+            // check if the point is on line
+            double dxc = cp_lat - lat1;
+            double dyc = cp_lon - lon1;
+            double dxl = lat2 - lat1;
+            double dyl = lon2 - lon1;
+            double cross = dxc * dyl - dyc * dxl;
+            if (Math.Abs(cross) > 0.1) {
+                return false;
+            }
+            if (Math.Abs(dxl)> Math.Abs(dyl))
+                return dxl > 0 ?
+                  lat1 <= cp_lat && cp_lat <= lat2 :
+                  lat2 <= cp_lat && cp_lat <= lat1;
+            else
+                return dyl > 0 ?
+                  lon1 <= cp_lon && cp_lon <= lon2 :
+                  lon2 <= cp_lon && cp_lon <= lon1;
+        }
+
+        private double Distance(double lat1, double lon1, double lat2, double lon2) {
+            return Math.Sqrt((lat2-lat1)* (lat2 - lat1) + (lon2-lon1) * (lon2-lon1));
+        }
+
+
+        // This is where the real work is done.
+        public void AddLine(double latitude, double longitude, double? z, double? m) {
+            if (_found) return;
+
+            if (IsPointOnLine(_lastlat, _lastlon, latitude, longitude, _cp_lat, _cp_lon)) {
+                // found
+                _found = true;
+                // calculate the distance .. 
+                var d = Distance(_lastlat, _lastlon, _cp_lat, _cp_lon);
+                _retval[0] = _distance + d;
+            } else {
+                _distance += Distance(_lastlat, _lastlon, latitude, longitude);
+            }
+
+            _lastlat = latitude;
+            _lastlon = longitude;
+
+        }
+
+        // This is a NOP.
+        public void EndFigure() {
+        }
+
+        // This is a NOP.
+        public void EndGeometry() {
+        }
+
+    }
+
 }

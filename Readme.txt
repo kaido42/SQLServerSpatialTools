@@ -90,6 +90,9 @@ Convert an input WKT to a valid geography instance.
 This function requires that the WKT coordinate values are longitude/latitude values,
 in that order and that a valid geography SRID value is supplied.
 
+DistanceAlongGeom(SqlGeography path, SqlGeography point) returns float
+Computes distance along the path to the point. Assumes the point lies on the path.
+
 SqlGeography ConvexHullGeography(SqlGeography geography)
 Computes ConvexHull of input geography and returns a polygon (unless all input points are colinear).
 

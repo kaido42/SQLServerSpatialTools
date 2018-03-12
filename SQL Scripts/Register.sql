@@ -49,6 +49,10 @@ create function VacuousGeographyToGeometry(@toConvert geography, @targetSrid int
 as external name SQLSpatialTools.[SQLSpatialTools.Functions].VacuousGeographyToGeometry
 go
 
+create function DistanceAlongGeom(@g geometry, @p geometry) returns float
+as external name SQLSpatialTools.[SQLSpatialTools.Functions].DistanceAlongGeom
+go
+
 create function ConvexHullGeography(@geog geography) returns geography
 as external name SQLSpatialTools.[SQLSpatialTools.Functions].ConvexHullGeography
 go

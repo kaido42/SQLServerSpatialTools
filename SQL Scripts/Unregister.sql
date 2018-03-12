@@ -15,6 +15,7 @@ drop function InterpolateBetweenGeog
 drop function InterpolateBetweenGeom
 drop function VacuousGeometryToGeography
 drop function VacuousGeographyToGeometry
+drop function DistanceAlongGeom
 
 drop function ConvexHullGeography
 drop function ConvexHullGeographyFromText
